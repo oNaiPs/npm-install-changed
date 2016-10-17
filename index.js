@@ -19,8 +19,13 @@ var crypto = require('crypto');
 var path = require('path');
 
 var hashFile = '.npm-install-changed.json';
-var recursive = process.argv.indexOf('--recursive') >= 0;
-var prune = process.argv.indexOf('--prune') >= 0;
+var args = process.argv.slice(2);
+var filteredArgs = args.filter(function(el){
+    return ['--recursive', '--bower', '--prune'].indexOf(el) === -1;
+});
+var recursive = args.indexOf('--recursive') >= 0;
+var prune = args.indexOf('--prune') >= 0;
+var bower = args.indexOf('--bower') >= 0;
 var config = {};
 var packager;
 
@@ -122,7 +127,8 @@ function configJsonDepsHash(configJsonDir) {
 }
 
 function spawnProcessAndHandleClose(action,hash,cb){
-    console.log('Running ' + packager.bin + ' ' + action + '...');
+    action = [].concat(action);
+    console.log('Running ' + packager.bin + ' ' + action.join(' ') + '...');
     var process = spawn(packager.bin, [action], {
         stdio: 'inherit'
     });
@@ -153,7 +159,7 @@ try {
 } catch (e) {}
 
 //determine what packager are we targeting
-if (process.argv.indexOf('--bower') >= 0) {
+if (bower) {
     packager = {
         bin: 'bower',
         configJson: './bower.json'
@@ -175,7 +181,7 @@ configJsonDepsHash(process.cwd()).then(function(hash) {
     }
 
     //looks like configJson dependencies have changed
-    spawnProcessAndHandleClose('install',hash,postInstall);
+    spawnProcessAndHandleClose(['install'].concat(filteredArgs),hash,postInstall);
 
 }).catch(function(err) {
     console.log(err);
